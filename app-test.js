@@ -1,4 +1,4 @@
-// app-test.js (updated)
+// app-test.js (seeded + robust)
 const mongoose = require('mongoose');
 const appModule = require('./app'); // could be app or { app, connectDb, mongoose }
 const chai = require('chai');
@@ -8,14 +8,33 @@ chai.should();
 chai.use(chaiHttp);
 
 // determine exports from ./app
-// support both: module.exports = app;
-// and module.exports = { app, connectDb, mongoose }
 const app = (appModule && appModule.app) ? appModule.app : appModule;
 const connectDb = (appModule && typeof appModule.connectDb === 'function') ? appModule.connectDb : null;
 
-let serverInstanceForClose = null; // if we need to start/close a real server
+// set up a schema/model locally using the same collection name 'planets'
+const Schema = mongoose.Schema;
+const dataSchema = new Schema({
+  name: String,
+  id: Number,
+  description: String,
+  image: String,
+  velocity: String,
+  distance: String
+});
+let PlanetsModel; // will be initialized after connection
 
-// debug helpers: show unhandled rejections / exceptions in CI logs
+// seed data (IDs and names must match tests)
+const seedPlanets = [
+  { id: 1, name: 'Mercury', description: 'Mercury desc' },
+  { id: 2, name: 'Venus', description: 'Venus desc' },
+  { id: 3, name: 'Earth', description: 'Earth desc' },
+  { id: 4, name: 'Mars', description: 'Mars desc' },
+  { id: 5, name: 'Jupiter', description: 'Jupiter desc' },
+  { id: 6, name: 'Saturn', description: 'Saturn desc' },
+  { id: 7, name: 'Uranus', description: 'Uranus desc' },
+  { id: 8, name: 'Neptune', description: 'Neptune desc' }
+];
+
 process.on('unhandledRejection', (reason, p) => {
   console.error('UNHANDLED REJECTION at:', p, 'reason:', reason);
 });
@@ -24,73 +43,58 @@ process.on('uncaughtException', err => {
 });
 
 before(async function() {
-  // give extra time to connect to DB
   this.timeout(20000);
 
-  // If tests run in an environment where MONGO_URI is set and app provides connectDb(), use it.
-  // Otherwise, if connectDb is missing but MONGO_URI exists, connect here with mongoose.
+  // 1) Connect DB
   if (connectDb) {
-    try {
-      await connectDb();
-    } catch (err) {
-      console.error('connectDb() failed:', err);
-      throw err;
-    }
+    // app provides connectDb() helper
+    await connectDb();
   } else if (process.env.MONGO_URI) {
-    try {
-      await mongoose.connect(process.env.MONGO_URI, {
-        // minimal options; driver 4+ does not need useNewUrlParser/useUnifiedTopology
-      });
-      console.log('mongoose connected from test bootstrap');
-    } catch (err) {
-      console.error('mongoose.connect() failed in tests:', err);
-      throw err;
-    }
+    await mongoose.connect(process.env.MONGO_URI);
   } else {
-    // no DB configured — tests may still run against in-memory or mocked data
-    console.warn('MONGO_URI not set and app.connectDb not available. Tests will run without DB connection.');
+    // No DB - tests will likely fail; warn and continue
+    console.warn('MONGO_URI not provided and app.connectDb not available. Tests may fail.');
+    return;
   }
 
-  // If app is not an Express app instance but a server start is required, you could start it here.
-  // However chai.request accepts an Express app directly, so we don't start a listener.
-  // If your code requires a running server (not Express app), start it and assign to serverInstanceForClose.
-  // Example:
-  // if (typeof app.listen === 'function') {
-  //   serverInstanceForClose = app.listen(3001);
-  // }
+  // 2) Initialize model on the active mongoose connection
+  // if model already registered reuse it to avoid OverwriteModelError
+  PlanetsModel = mongoose.models.planets || mongoose.model('planets', dataSchema);
+
+  // 3) Clean + seed data
+  try {
+    await PlanetsModel.deleteMany({});
+    await PlanetsModel.insertMany(seedPlanets);
+    console.log('Seeded planets collection with', seedPlanets.length, 'documents');
+  } catch (err) {
+    console.error('Error seeding planets collection:', err);
+    throw err;
+  }
 });
 
 after(async function() {
   this.timeout(10000);
 
-  // Close HTTP server if we started one
-  if (serverInstanceForClose && typeof serverInstanceForClose.close === 'function') {
-    await new Promise((resolve) => serverInstanceForClose.close(resolve));
-  }
-
-  // Close mongoose connection if open
+  // cleanup DB and close connection (so mocha exits cleanly)
   try {
     if (mongoose.connection && mongoose.connection.readyState !== 0) {
-      // optional: don't drop DB in CI if you rely on persistent test DB; comment if undesired
-      // await mongoose.connection.dropDatabase();
+      // drop test DB so next run starts clean
+      try { await mongoose.connection.dropDatabase(); } catch (e) { /* ignore */ }
       await mongoose.connection.close();
       console.log('Mongoose connection closed after tests');
     }
   } catch (err) {
-    console.error('Error while closing mongoose connection:', err);
+    console.error('Error during after() cleanup:', err);
   }
 });
 
-// --------------------
-// Your existing tests (unchanged) — only changed top-level setup/teardown above
-// --------------------
-
+// ---------- Tests (unchanged, only small defensive change to handle err) ----------
 describe('Planets API Suite', () => {
 
     describe('Fetching Planet Details', () => {
         it('it should fetch a planet named Mercury', (done) => {
             let payload = { id: 1 };
-            chai.request(app)
+          chai.request(app)
               .post('/planet')
               .send(payload)
               .end((err, res) => {
@@ -104,7 +108,7 @@ describe('Planets API Suite', () => {
 
         it('it should fetch a planet named Venus', (done) => {
             let payload = { id: 2 };
-            chai.request(app)
+          chai.request(app)
               .post('/planet')
               .send(payload)
               .end((err, res) => {
@@ -118,7 +122,7 @@ describe('Planets API Suite', () => {
 
         it('it should fetch a planet named Earth', (done) => {
             let payload = { id: 3 };
-            chai.request(app)
+          chai.request(app)
               .post('/planet')
               .send(payload)
               .end((err, res) => {
@@ -131,7 +135,7 @@ describe('Planets API Suite', () => {
         });
         it('it should fetch a planet named Mars', (done) => {
             let payload = { id: 4 };
-            chai.request(app)
+          chai.request(app)
               .post('/planet')
               .send(payload)
               .end((err, res) => {
@@ -145,7 +149,7 @@ describe('Planets API Suite', () => {
 
         it('it should fetch a planet named Jupiter', (done) => {
             let payload = { id: 5 };
-            chai.request(app)
+          chai.request(app)
               .post('/planet')
               .send(payload)
               .end((err, res) => {
@@ -159,7 +163,7 @@ describe('Planets API Suite', () => {
 
         it('it should fetch a planet named Satrun', (done) => {
             let payload = { id: 6 };
-            chai.request(app)
+          chai.request(app)
               .post('/planet')
               .send(payload)
               .end((err, res) => {
@@ -173,7 +177,7 @@ describe('Planets API Suite', () => {
 
         it('it should fetch a planet named Uranus', (done) => {
             let payload = { id: 7 };
-            chai.request(app)
+          chai.request(app)
               .post('/planet')
               .send(payload)
               .end((err, res) => {
@@ -187,7 +191,7 @@ describe('Planets API Suite', () => {
 
         it('it should fetch a planet named Neptune', (done) => {
             let payload = { id: 8 };
-            chai.request(app)
+          chai.request(app)
               .post('/planet')
               .send(payload)
               .end((err, res) => {
@@ -217,7 +221,7 @@ describe('Testing Other Endpoints', () => {
         });
     });
 
-    describe('it should fetch Live Status', () => {
+    describe('it should fetch Live Status', (done) => {
         it('it checks Liveness endpoint', (done) => {
           chai.request(app)
               .get('/live')
@@ -230,7 +234,7 @@ describe('Testing Other Endpoints', () => {
         });
     });
 
-    describe('it should fetch Ready Status', () => {
+    describe('it should fetch Ready Status', (done) => {
         it('it checks Readiness endpoint', (done) => {
           chai.request(app)
               .get('/ready')
