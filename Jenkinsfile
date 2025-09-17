@@ -11,12 +11,6 @@ pipeline {
             }
         }
 
-        stage('Dependency Version') {
-            steps {
-                sh 'dependency-check.sh --version'
-            }
-        }
-
         stage("dependency Scanning") {
             parallel {
                 stage('NPM Dependency Audit') {
@@ -36,7 +30,7 @@ pipeline {
                             --format ALL
                             --prettyPrint
                         ''',
-                        odcInstallation: 'OWASP-DepCheck-10'
+                        odcInstallation: 'OWASP-DepCheck-12'
                     }
                 }
             }
