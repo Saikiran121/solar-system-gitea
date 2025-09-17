@@ -11,6 +11,12 @@ pipeline {
             }
         }
 
+        stage('Dependency Version') {
+            steps {
+                sh 'dependency-check.sh --version'
+            }
+        }
+
         stage("dependency Scanning") {
             parallel {
                 stage('NPM Dependency Audit') {
