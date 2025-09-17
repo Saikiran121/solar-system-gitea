@@ -1,97 +1,115 @@
 const path = require('path');
-const fs = require('fs')
+const fs = require('fs');
 const express = require('express');
 const OS = require('os');
 const bodyParser = require('body-parser');
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 const app = express();
-const cors = require('cors')
-const serverless = require('serverless-http')
-
+const cors = require('cors');
+const serverless = require('serverless-http');
 
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, '/')));
-app.use(cors())
+app.use(cors());
 
-mongoose.connect(process.env.MONGO_URI, {
+// connect to MongoDB using modern Promise style
+mongoose
+  .connect(process.env.MONGO_URI, {
     user: process.env.MONGO_USERNAME,
     pass: process.env.MONGO_PASSWORD,
     useNewUrlParser: true,
     useUnifiedTopology: true
-}, function(err) {
-    if (err) {
-        console.log("error!! " + err)
-    } else {
-      //  console.log("MongoDB Connection Successful")
-    }
-})
+  })
+  .then(() => {
+    console.log('MongoDB Connection Successful');
+  })
+  .catch((err) => {
+    console.error('MongoDB connection error:', err);
+  });
 
-var Schema = mongoose.Schema;
+const Schema = mongoose.Schema;
 
-var dataSchema = new Schema({
-    name: String,
-    id: Number,
-    description: String,
-    image: String,
-    velocity: String,
-    distance: String
+const dataSchema = new Schema({
+  name: String,
+  id: Number,
+  description: String,
+  image: String,
+  velocity: String,
+  distance: String
 });
-var planetModel = mongoose.model('planets', dataSchema);
 
+const planetModel = mongoose.model('planets', dataSchema);
 
+// POST /planet - find planet by id
+app.post('/planet', async (req, res, next) => {
+  try {
+    const id = req.body.id;
 
-app.post('/planet',   function(req, res) {
-   // console.log("Received Planet ID " + req.body.id)
-    planetModel.findOne({
-        id: req.body.id
-    }, function(err, planetData) {
-        if (err) {
-            alert("Ooops, We only have 9 planets and a sun. Select a number from 0 - 9")
-            res.send("Error in Planet Data")
-        } else {
-            res.send(planetData);
-        }
-    })
-})
+    // basic validation
+    if (id === undefined || id === null) {
+      return res.status(400).json({ error: 'Missing planet id in request body' });
+    }
 
-app.get('/',   async (req, res) => {
-    res.sendFile(path.join(__dirname, '/', 'index.html'));
+    const planetData = await planetModel.findOne({ id: id });
+
+    if (!planetData) {
+      // If you expect 0-9, you can return a helpful message
+      return res.status(404).json({ error: 'Planet not found. Choose id between 0-9.' });
+    }
+
+    return res.json(planetData);
+  } catch (err) {
+    // pass to error handler / log
+    console.error('Error fetching planet:', err);
+    return next(err);
+  }
+});
+
+app.get('/', async (req, res) => {
+  res.sendFile(path.join(__dirname, '/', 'index.html'));
 });
 
 app.get('/api-docs', (req, res) => {
-    fs.readFile('oas.json', 'utf8', (err, data) => {
-      if (err) {
-        console.error('Error reading file:', err);
-        res.status(500).send('Error reading file');
-      } else {
-        res.json(JSON.parse(data));
-      }
-    });
+  fs.readFile('oas.json', 'utf8', (err, data) => {
+    if (err) {
+      console.error('Error reading file:', err);
+      return res.status(500).send('Error reading file');
+    }
+    res.json(JSON.parse(data));
   });
-  
-app.get('/os',   function(req, res) {
-    res.setHeader('Content-Type', 'application/json');
-    res.send({
-        "os": OS.hostname(),
-        "env": process.env.NODE_ENV
-    });
-})
+});
 
-app.get('/live',   function(req, res) {
-    res.setHeader('Content-Type', 'application/json');
-    res.send({
-        "status": "live"
-    });
-})
+app.get('/os', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send({
+    os: OS.hostname(),
+    env: process.env.NODE_ENV
+  });
+});
 
-app.get('/ready',   function(req, res) {
-    res.setHeader('Content-Type', 'application/json');
-    res.send({
-        "status": "ready"
-    });
-})
+app.get('/live', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send({ status: 'live' });
+});
 
-app.listen(3000, () => { console.log("Server successfully running on port - " +3000); })
+app.get('/ready', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send({ status: 'ready' });
+});
+
+// basic express error handler (so tests get meaningful responses)
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
+
+if (require.main === module) {
+  // only start server when run directly (not when required by tests)
+  app.listen(3000, () => {
+    console.log('Server successfully running on port - 3000');
+  });
+}
+
 module.exports = app;
+// module.exports.handler = serverless(app)
 
-//module.exports.handler = serverless(app)
