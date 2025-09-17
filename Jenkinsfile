@@ -48,7 +48,12 @@ pipeline {
                 stage('Unit Testing') {
                     steps {
                         withCredentials([usernamePassword(credentialsId: 'mongo-db-credentials', passwordVariable: 'MONGO_PASSWORD', usernameVariable: 'MONGO_USERNAME')]) {
-                            sh 'npm test'
+                            sh '''
+                            ATLAS_HOST="cluster0.sghaem5.mongodb.net"
+                            DBNAME="superData"
+                            export MONGO_URI="mongodb+srv://${MONGO_USERNAME}:${MONGO_PASSWORD}@${ATLAS_HOST}/${DBNAME}?retryWrites=true&w=majority"
+                            npm test 
+                            '''
                         }  
 
                         junit allowEmptyResults: true, stdioRetention: '', testResults: 'test-results.xml'
