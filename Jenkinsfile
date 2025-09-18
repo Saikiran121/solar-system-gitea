@@ -144,6 +144,15 @@ pipeline {
                 }
             }
         }
+
+        stage('Push Docker Image') {
+            steps {
+                withDockerRegistry(credentialsId: 'docker-hub-credentials', url: "") {
+
+                    sh 'docker push saikiran8050/ui-improvement:$GIT_COMMIT'
+                }
+            }
+        }
     } 
 
     post {
