@@ -10,6 +10,7 @@ pipeline {
         MONGO_DB_CREDS = credentials('mongo-db-credentials')
         MONGO_USERNAME = credentials('mongo-db-username')
         MONGO_PASSWORD = credentials('mongo-db-password')
+        SONAR_SCANNER_HOME = tool 'sonarube-scanner'
     }
 
     stages {
@@ -71,6 +72,19 @@ pipeline {
                             }
 
                         publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: './coverage/lcov-report/', reportFiles: 'index.html', reportName: 'Code Coverage HTML Report', reportTitles: '', useWrapperFileDirectly: true])
+                    }
+                }
+
+                stage('SAST - SonarQube') {
+                    steps {
+                        sh 'echo $SONAR_SCANNER_HOME'
+                        sh '''
+                            $SONAR_SCANNER_HOME/bin/sonar-scanner \
+                            -Dsonar.host.url=http://43.205.228.206:9000 \
+                            -Dsonar.sources=app.js \
+                            -Dsonar.token=sqp_f4c137cf7d522415fc7abe0aad3a96a44c0b1b4a \
+                            -Dsonar.projectKey=UI-Improvement
+                        '''
                     }
                 }
             }
