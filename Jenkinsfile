@@ -75,10 +75,13 @@ pipeline {
                         publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: './coverage/lcov-report/', reportFiles: 'index.html', reportName: 'Code Coverage HTML Report', reportTitles: '', useWrapperFileDirectly: true])
                     }
                 }
+            }
 
-                stage('SAST - SonarQube') {
+            stage('SAST - SonarQube') {
                     steps {
                         timeout(time: 240, unit: 'SECONDS') {
+                            sh 'echo "workspace: $(pwd)"; ls -la || true; ls -la coverage || true; [ -f coverage/lcov.info ] && echo "lcov present" || echo "lcov MISSING"'
+
                             withSonarQubeEnv('sonar-qube-token') {
                                 sh 'echo $SONAR_SCANNER_HOME'
                                 sh '''
@@ -91,7 +94,6 @@ pipeline {
                             waitForQualityGate abortPipeline: true
                         }
                     }
-                }
             }
         }
         
