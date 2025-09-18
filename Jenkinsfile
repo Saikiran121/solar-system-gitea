@@ -60,6 +60,13 @@ pipeline {
 
                     }
                 }
+
+                stage('Code Coverage') {
+                    steps {
+                        withCredentials([usernamePassword(credentialsId: 'mongo-db-credentials', passwordVariable: 'MONGO_PASSWORD', usernameVariable: 'MONGO_USERNAME')]) {
+                            sh 'npm run coverage'
+                    }
+                }
             }
         }
         
