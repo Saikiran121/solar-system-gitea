@@ -100,7 +100,25 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t saikiran8050/ui-improvement:GIT_COMMIT .'
+                sh 'docker build -t saikiran8050/ui-improvement:$GIT_COMMIT .'
+            }
+        }
+
+        stage("Trivy Vulnerability Scanning") {
+            steps {
+                sh '''
+                    trivy image saikiran8050/ui-improvement:$GIT_COMMIT \
+                        --severity LOW,MEDIUM,HIGH \
+                        --exit-code 0 \
+                        --quiet \
+                        --format json -o trivy-image-MEDIUM-results.json
+                    
+                    trivy image saikiran8050/ui-improvement:$GIT_COMMIT \
+                        --severity CRITICAL \
+                        --exit-code 1 \
+                        --quiet \
+                        --format json -o trivy-image-CRITICAL-results.json
+                '''
             }
         }
     } 
