@@ -10,7 +10,7 @@ pipeline {
         MONGO_DB_CREDS = credentials('mongo-db-credentials')
         MONGO_USERNAME = credentials('mongo-db-username')
         MONGO_PASSWORD = credentials('mongo-db-password')
-        SONAR_SCANNER_HOME = tool 'sonarube-scanner'
+        SONAR_SCANNER_HOME = tool 'sonarqube-scanner'
     }
 
     stages {
