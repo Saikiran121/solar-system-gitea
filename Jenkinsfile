@@ -7,6 +7,7 @@ pipeline {
 
     environment {
         MONGO_URI = "mongodb+srv://saikiranbiradar76642_db_user:wOtaomBiiL4bOUF3@cluster0.sghaem5.mongodb.net/superData?retryWrites=true&w=majority"
+        MONGO_DB_CREDS = credentials('mongo-db-credentials')
     }
 
     stages {
@@ -47,27 +48,25 @@ pipeline {
 
                 stage('Unit Testing') {
                     steps {
-                        withCredentials([usernamePassword(credentialsId: 'mongo-db-credentials', passwordVariable: 'MONGO_PASSWORD', usernameVariable: 'MONGO_USERNAME')]) {
                             sh '''
+                            echo Colon-Separated - $MONGO_DB_CREDS
+                            echo Username - $MONGO_DB_CREDS_USR
+                            echo Password - $MONGO_DB_CREDS_PSW
                             ATLAS_HOST="cluster0.sghaem5.mongodb.net"
                             DBNAME="superData"
                             export MONGO_URI="mongodb+srv://${MONGO_USERNAME}:${MONGO_PASSWORD}@${ATLAS_HOST}/${DBNAME}?retryWrites=true&w=majority"
                             npm test 
                             '''
-                        }  
 
-                        junit allowEmptyResults: true, stdioRetention: '', testResults: 'test-results.xml'
-
+                            junit allowEmptyResults: true, stdioRetention: '', testResults: 'test-results.xml'
                     }
                 }
 
                 stage('Code Coverage') {
                     steps {
-                        withCredentials([usernamePassword(credentialsId: 'mongo-db-credentials', passwordVariable: 'MONGO_PASSWORD', usernameVariable: 'MONGO_USERNAME')]) {
                             catchError(buildResult: 'SUCCESS', message: 'It will be fixed in future releases', stageResult: 'UNSTABLE') {
                                 sh 'npm run coverage'
                             }
-                        }
 
                         publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: './coverage/lcov-report/', reportFiles: 'index.html', reportName: 'Code Coverage HTML Report', reportTitles: '', useWrapperFileDirectly: true])
                     }
