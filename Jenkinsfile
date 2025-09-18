@@ -81,6 +81,7 @@ pipeline {
                         sh '''
                             $SONAR_SCANNER_HOME/bin/sonar-scanner \
                             -Dsonar.host.url=http://43.205.228.206:9000 \
+                            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
                             -Dsonar.sources=app.js \
                             -Dsonar.token=sqp_f4c137cf7d522415fc7abe0aad3a96a44c0b1b4a \
                             -Dsonar.projectKey=UI-Improvement
