@@ -54,7 +54,7 @@ pipeline {
                             echo Password - $MONGO_DB_CREDS_PSW
                             ATLAS_HOST="cluster0.sghaem5.mongodb.net"
                             DBNAME="superData"
-                            export MONGO_URI="mongodb+srv://${MONGO_USERNAME}:${MONGO_PASSWORD}@${ATLAS_HOST}/${DBNAME}?retryWrites=true&w=majority"
+                            export MONGO_URI="mongodb+srv://${MONGO_DB_CREDS_USR}:${MONGO_DB_CREDS_PSW}@${ATLAS_HOST}/${DBNAME}?retryWrites=true&w=majority"
                             npm test 
                             '''
 
