@@ -6,7 +6,7 @@ pipeline {
     }
 
     environment {
-        MONGO_URI = "mongodb+srv://saikiranbiradar76642_db_user:wOtaomBiiL4bOUF3@cluster0.sghaem5.mongodb.net/superData?retryWrites=true&w=majority"
+        MONGO_URI = "mongodb+srv://saikiranbiradar76642_db_user:REDACTED@cluster0.sghaem5.mongodb.net/superData?retryWrites=true&w=majority"
         MONGO_DB_CREDS = credentials('mongo-db-credentials')
         MONGO_USERNAME = credentials('mongo-db-username')
         MONGO_PASSWORD = credentials('mongo-db-password')
@@ -20,7 +20,7 @@ pipeline {
             }
         }
 
-        stage("dependency Scanning") {
+        stage('dependency Scanning') {
             parallel {
                 stage('NPM Dependency Audit') {
                     steps {
@@ -52,7 +52,7 @@ pipeline {
 
                 stage('Unit Testing') {
                     steps {
-                            sh '''
+                        sh '''
                             echo Colon-Separated - $MONGO_DB_CREDS
                             echo Username - $MONGO_DB_CREDS_USR
                             echo Password - $MONGO_DB_CREDS_PSW
@@ -60,59 +60,55 @@ pipeline {
                             DBNAME="superData"
                             export MONGO_URI="mongodb+srv://${MONGO_DB_CREDS_USR}:${MONGO_DB_CREDS_PSW}@${ATLAS_HOST}/${DBNAME}?retryWrites=true&w=majority"
                             npm test 
-                            '''
-
-                            junit allowEmptyResults: true, stdioRetention: '', testResults: 'test-results.xml'
+                        '''
+                        junit allowEmptyResults: true, stdioRetention: '', testResults: 'test-results.xml'
                     }
                 }
 
                 stage('Code Coverage') {
                     steps {
-                            catchError(buildResult: 'SUCCESS', message: 'It will be fixed in future releases', stageResult: 'UNSTABLE') {
-                                sh 'npm run coverage'
-                            }
-
+                        catchError(buildResult: 'SUCCESS', message: 'It will be fixed in future releases', stageResult: 'UNSTABLE') {
+                            sh 'npm run coverage'
+                        }
+                        
+                        stash name: 'coverage', includes: 'coverage/**', allowEmpty: true
                         publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: './coverage/lcov-report/', reportFiles: 'index.html', reportName: 'Code Coverage HTML Report', reportTitles: '', useWrapperFileDirectly: true])
                     }
                 }
             }
+        }
 
-            stage('SAST - SonarQube') {
-                    steps {
-                        timeout(time: 240, unit: 'SECONDS') {
-                            sh 'echo "workspace: $(pwd)"; ls -la || true; ls -la coverage || true; [ -f coverage/lcov.info ] && echo "lcov present" || echo "lcov MISSING"'
+        
+        stage('SAST - SonarQube') {
+            steps {
+                timeout(time: 240, unit: 'SECONDS') {
+                    unstash 'coverage' 
+                    sh 'echo "workspace: $(pwd)"; ls -la || true; ls -la coverage || true; [ -f coverage/lcov.info ] && echo "lcov present" || echo "lcov MISSING"'
 
-                            withSonarQubeEnv('sonar-qube-token') {
-                                sh 'echo $SONAR_SCANNER_HOME'
-                                sh '''
-                                    $SONAR_SCANNER_HOME/bin/sonar-scanner \
-                                    -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
-                                    -Dsonar.sources=app.js \
-                                    -Dsonar.projectKey=UI-Improvement
-                                '''
-                            }
-                            waitForQualityGate abortPipeline: true
-                        }
+                    withSonarQubeEnv('sonar-qube-token') {
+                        sh '''
+                            $SONAR_SCANNER_HOME/bin/sonar-scanner \
+                              -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
+                              -Dsonar.sources=app.js \
+                              -Dsonar.projectKey=UI-Improvement
+                        '''
                     }
+                    waitForQualityGate abortPipeline: true
+                }
             }
         }
-        
-    }
+    } 
 
     post {
         always {
+            node {
+                junit allowEmptyResults: true, stdioRetention: '', testResults: 'test-results.xml'
+                junit allowEmptyResults: true, stdioRetention: '', testResults: './dependency-check-report/dependency-check-junit.xml'
 
-            junit allowEmptyResults: true, stdioRetention: '', testResults: 'test-results.xml'
+                publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: './dependency-check-report/', reportFiles: 'dependency-check-jenkins.html', reportName: 'Dependency Check HTML Report', reportTitles: '', useWrapperFileDirectly: true])
 
-
-            junit allowEmptyResults: true, stdioRetention: '', testResults: './dependency-check-report/dependency-check-junit.xml'
-
-            publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: './dependency-check-report/', reportFiles: 'dependency-check-jenkins.html', reportName: 'Dependency Check HTML Report', reportTitles: '', useWrapperFileDirectly: true])
-                    
-
-            publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: './coverage/lcov-report/', reportFiles: 'index.html', reportName: 'Code Coverage HTML Report', reportTitles: '', useWrapperFileDirectly: true])
-
-            
+                publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: './coverage/lcov-report/', reportFiles: 'index.html', reportName: 'Code Coverage HTML Report', reportTitles: '', useWrapperFileDirectly: true])
+            }
         }
     }
 }
