@@ -8,6 +8,8 @@ pipeline {
     environment {
         MONGO_URI = "mongodb+srv://saikiranbiradar76642_db_user:wOtaomBiiL4bOUF3@cluster0.sghaem5.mongodb.net/superData?retryWrites=true&w=majority"
         MONGO_DB_CREDS = credentials('mongo-db-credentials')
+        MONGO_USERNAME = credentials('mongo-db-username')
+        MONGO_PASSWORD = credentials('mongo-db-password')
     }
 
     stages {
@@ -74,6 +76,23 @@ pipeline {
             }
         }
         
+    }
+
+    post {
+        always {
+
+            junit allowEmptyResults: true, stdioRetention: '', testResults: 'test-results.xml'
+
+
+            junit allowEmptyResults: true, stdioRetention: '', testResults: './dependency-check-report/dependency-check-junit.xml'
+
+            publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: './dependency-check-report/', reportFiles: 'dependency-check-jenkins.html', reportName: 'Dependency Check HTML Report', reportTitles: '', useWrapperFileDirectly: true])
+                    
+
+            publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: './coverage/lcov-report/', reportFiles: 'index.html', reportName: 'Code Coverage HTML Report', reportTitles: '', useWrapperFileDirectly: true])
+
+            
+        }
     }
 }
 
