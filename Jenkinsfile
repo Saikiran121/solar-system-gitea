@@ -100,7 +100,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t saikiran8050/UI-Improvement:GIT_COMMIT .'
+                sh 'docker build -t saikiran8050/ui-improvement:GIT_COMMIT .'
             }
         }
     } 
