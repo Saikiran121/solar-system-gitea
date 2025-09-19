@@ -212,7 +212,7 @@ pipeline {
             }
             steps {
                 sh 'printenv | grep -i branch'
-                withAWS(credentials:'aws-s3-ec2-lambda-creds' region: 'ap-south-1') {
+                withAWS(credentials:'aws-s3-ec2-lambda-creds', region: 'ap-south-1') {
                 sh '''
                     bash /home/ubuntu/git/solar-system-gitea/integration-ec2-testing.sh
                 '''
