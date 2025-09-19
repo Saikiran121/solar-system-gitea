@@ -162,18 +162,19 @@ pipeline {
                 script {
                     sshagent(['aws-dev-deploy-ec2-instance']) {
                         sh '''
-                            ssh -o StrictHostKeyChecking=no ubuntu@65.0.26.107 "
-                                if sudo ps -a | grep -q "ui-improvement"; then
-                                    echo "Container found. Stopping...."
-                                    sudo docker stop "ui-improvement" && sudo docker rm "ui-improvement"
-                                    echo "Container Stopped and removed"
-                                fi
-                                    sudo docker run --name ui-improvement \
-                                        -e "MONGO_URI=$MONGO_URI" \
-                                        -e "MONGO_USERNAME=$MONGO_USERNAME" \
-                                        -e "MONGO_PASSWORD=$MONGO_PASSWORD" \
-                                        -p 3000:3000 -d saikiran8050/ui-improvement:$GIT_COMMIT 
-                                "
+                            ssh -o StrictHostKeyChecking=no ubuntu@65.0.26.107 'bash -s' <<'REMOTE_SCRIPT'
+                            if sudo ps -a | grep -q "ui-improvement"; then
+                            echo "Container found. Stopping...."
+                            sudo docker stop ui-improvement && sudo docker rm ui-improvement
+                            echo "Container Stopped and removed"
+                            fi
+                            
+                            sudo docker run --name ui-improvement \
+                            -e "MONGO_URI=${MONGO_URI}" \
+                            -e "MONGO_USERNAME=${MONGO_USERNAME}" \
+                            -e "MONGO_PASSWORD=${MONGO_PASSWORD}" \
+                            -p 3000:3000 -d saikiran8050/ui-improvement:${GIT_COMMIT}
+                            REMOTE_SCRIPT
                         '''
                     }
                 }
