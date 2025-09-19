@@ -98,6 +98,16 @@ pipeline {
             }
         }
 
+        stage('Set Git Commit') {
+          steps {
+            checkout scm
+            script {
+              env.GIT_COMMIT = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
+              echo "GIT_COMMIT set to ${env.GIT_COMMIT}"
+            }
+          }
+        }
+
         stage('Build Docker Image') {
             steps {
                 sh 'docker build -t saikiran8050/ui-improvement:$GIT_COMMIT .'
@@ -154,15 +164,6 @@ pipeline {
             }
         }
 
-        stage('Set Git Commit') {
-          steps {
-            checkout scm
-            script {
-              env.GIT_COMMIT = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
-              echo "GIT_COMMIT set to ${env.GIT_COMMIT}"
-            }
-          }
-        }
         
         stage('Deploy to EC2') {
           when { branch 'feature/*' }
