@@ -180,14 +180,12 @@ pipeline {
         echo "MONGO_URI='${MONGO_URI:-}'"
         echo "MONGO_USERNAME='${MONGO_USERNAME:-}'"
         
-        # stop + remove existing container if present
         if sudo docker ps -a --format '{{.Names}}' | grep -xq "ui-improvement"; then
           echo "Container found. Stopping...."
           sudo docker stop ui-improvement && sudo docker rm ui-improvement
           echo "Container stopped and removed"
         fi
         
-        # run container using explicit image (GIT_COMMIT expanded locally)
         sudo docker run --name ui-improvement \
           -e "MONGO_URI=${MONGO_URI}" \
           -e "MONGO_USERNAME=${MONGO_USERNAME}" \
@@ -200,7 +198,8 @@ pipeline {
             }
           }
         }
-        
+
+
     }
 
     post {
