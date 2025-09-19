@@ -211,10 +211,12 @@ pipeline {
                 branch 'feature/*'
             }
             steps {
+                checkout scm 
+                sh 'chmod +x ./integration-ec2-testing.sh || true'
                 sh 'printenv | grep -i branch'
                 withAWS(credentials:'aws-s3-ec2-lambda-creds', region: 'ap-south-1') {
                 sh '''
-                    bash /home/ubuntu/git/solar-system-gitea/integration-ec2-testing.sh
+                    bash ./integration-ec2-testing.sh
                 '''
                 }
             }
