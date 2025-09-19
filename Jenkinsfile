@@ -156,40 +156,40 @@ pipeline {
 
         stage('Set Git Commit') {
           steps {
+            checkout scm
             script {
               env.GIT_COMMIT = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
               echo "GIT_COMMIT set to ${env.GIT_COMMIT}"
             }
           }
         }
-
-
+        
         stage('Deploy to EC2') {
-            when { branch 'feature/*' }
-            steps {
-                script {
-                    sshagent(['aws-dev-deploy-ec2-instance']) {
-                        sh '''
+          when { branch 'feature/*' }
+          steps {
+            script {
+              sshagent(['aws-dev-deploy-ec2-instance']) {
+                sh '''
         ssh -o StrictHostKeyChecking=no ubuntu@65.0.26.107 'bash -s' <<'REMOTE_SCRIPT'
         set -euo pipefail
-
+        
         # debug
         echo "Resolved vars on remote (masked):"
         echo "GIT_COMMIT='${GIT_COMMIT}'"
-        echo "MONGO_URI='${MONGO_URI}'"
-        echo "MONGO_USERNAME='${MONGO_USERNAME}'"
-
-        # build a safe image name variable (trim newlines just in case)
+        echo "MONGO_URI='${MONGO_URI:-}'"
+        echo "MONGO_USERNAME='${MONGO_USERNAME:-}'"
+        
+        # build a safe image name variable
         IMAGE="saikiran8050/ui-improvement:${GIT_COMMIT}"
         echo "Using IMAGE=${IMAGE}"
-
-        # stop + remove existing container if present
-        if sudo ps -a | grep -q "ui-improvement"; then
+        
+        # stop + remove existing container if present (check docker containers)
+        if sudo docker ps -a | grep -q "ui-improvement"; then
           echo "Container found. Stopping...."
           sudo docker stop ui-improvement && sudo docker rm ui-improvement
           echo "Container stopped and removed"
         fi
-
+        
         # run container
         sudo docker run --name ui-improvement \
           -e "MONGO_URI=${MONGO_URI}" \
@@ -198,9 +198,9 @@ pipeline {
           -p 3000:3000 -d "${IMAGE}"
         REMOTE_SCRIPT
         '''
-                    }
-                }
+              }
             }
+          }
         }
 
     } 
