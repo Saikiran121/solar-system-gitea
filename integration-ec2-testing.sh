@@ -12,7 +12,7 @@
 
 set -u
 
-TAG_VALUE="dev-deploy"            # the tag value to look for (adjust if needed)
+TAG_VALUE="Jenkins-deploy"            # the tag value to look for (adjust if needed)
 PORT="3000"
 LIVENESS_PATH="/live"
 PLANET_PATH="/planet"
