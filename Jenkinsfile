@@ -156,7 +156,7 @@ pipeline {
 
         stage('Deploy to EC2') {
             steps {
-                script {}
+                script {
                     sshagent(['aws-dev-deploy-ec2-instance']) {
                         sh '''
                             ssh -o StrictHostKeyChecking=no ubuntu@65.0.26.107 "
