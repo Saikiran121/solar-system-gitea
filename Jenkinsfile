@@ -155,31 +155,44 @@ pipeline {
         }
 
         stage('Deploy to EC2') {
-            when {
-                branch 'feature/*'
-            }
+            when { branch 'feature/*' }
             steps {
                 script {
                     sshagent(['aws-dev-deploy-ec2-instance']) {
                         sh '''
-                            ssh -o StrictHostKeyChecking=no ubuntu@65.0.26.107 'bash -s' <<'REMOTE_SCRIPT'
-                            if sudo ps -a | grep -q "ui-improvement"; then
-                            echo "Container found. Stopping...."
-                            sudo docker stop ui-improvement && sudo docker rm ui-improvement
-                            echo "Container Stopped and removed"
-                            fi
-                            
-                            sudo docker run --name ui-improvement \
-                            -e "MONGO_URI=${MONGO_URI}" \
-                            -e "MONGO_USERNAME=${MONGO_USERNAME}" \
-                            -e "MONGO_PASSWORD=${MONGO_PASSWORD}" \
-                            -p 3000:3000 -d saikiran8050/ui-improvement:${GIT_COMMIT}
-                            REMOTE_SCRIPT
-                        '''
+        ssh -o StrictHostKeyChecking=no ubuntu@65.0.26.107 'bash -s' <<'REMOTE_SCRIPT'
+        set -euo pipefail
+
+        # debug
+        echo "Resolved vars on remote (masked):"
+        echo "GIT_COMMIT='${GIT_COMMIT}'"
+        echo "MONGO_URI='${MONGO_URI}'"
+        echo "MONGO_USERNAME='${MONGO_USERNAME}'"
+
+        # build a safe image name variable (trim newlines just in case)
+        IMAGE="saikiran8050/ui-improvement:${GIT_COMMIT}"
+        echo "Using IMAGE=${IMAGE}"
+
+        # stop + remove existing container if present
+        if sudo ps -a | grep -q "ui-improvement"; then
+          echo "Container found. Stopping...."
+          sudo docker stop ui-improvement && sudo docker rm ui-improvement
+          echo "Container stopped and removed"
+        fi
+
+        # run container
+        sudo docker run --name ui-improvement \
+          -e "MONGO_URI=${MONGO_URI}" \
+          -e "MONGO_USERNAME=${MONGO_USERNAME}" \
+          -e "MONGO_PASSWORD=${MONGO_PASSWORD}" \
+          -p 3000:3000 -d "${IMAGE}"
+        REMOTE_SCRIPT
+        '''
                     }
                 }
             }
         }
+
     } 
 
     post {
