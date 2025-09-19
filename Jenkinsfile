@@ -155,6 +155,9 @@ pipeline {
         }
 
         stage('Deploy to EC2') {
+            when {
+                branch 'feature/*'
+            }
             steps {
                 script {
                     sshagent(['aws-dev-deploy-ec2-instance']) {
@@ -166,9 +169,9 @@ pipeline {
                                     echo "Container Stopped and removed"
                                 fi
                                     sudo docker run --name ui-improvement \
-                                        -e MONGO_URI=$MONGO_URI \
-                                        -e MONGO_USERNAME=$MONGO_USERNAME \
-                                        -e MONGO_PASSWORD=$MONGO_PASSWORD \
+                                        -e "MONGO_URI=$MONGO_URI" \
+                                        -e "MONGO_USERNAME=$MONGO_USERNAME" \
+                                        -e "MONGO_PASSWORD=$MONGO_PASSWORD" \
                                         -p 3000:3000 -d saikiran8050/ui-improvement:$GIT_COMMIT 
                                 "
                         '''
