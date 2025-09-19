@@ -170,15 +170,15 @@ pipeline {
           steps {
             script {
               sshagent(['aws-dev-deploy-ec2-instance']) {
-                // create deploy.sh in workspace (Jenkins will expand ${...} here)
+                // create deploy.sh in workspace (Jenkins/Groovy will expand ${env.*} here)
                 writeFile file: 'deploy.sh', text: """#!/bin/bash
         set -euo pipefail
         set -x
         
-        echo "GIT_COMMIT='${GIT_COMMIT}'"
-        printf 'GIT_COMMIT (len=%s): "%s\\n"' "${#GIT_COMMIT}" "${GIT_COMMIT}"
-        echo "MONGO_URI='${MONGO_URI:-}'"
-        echo "MONGO_USERNAME='${MONGO_USERNAME:-}'"
+        echo "GIT_COMMIT='${env.GIT_COMMIT}'"
+        printf 'GIT_COMMIT (len=%s): \"%s\\\\n\"' ${env.GIT_COMMIT.length()} \"${env.GIT_COMMIT}\"
+        echo "MONGO_URI='${env.MONGO_URI ?: ''}'"
+        echo "MONGO_USERNAME='${env.MONGO_USERNAME ?: ''}'"
         
         # stop + remove existing container if present
         if sudo docker ps -a --format '{{.Names}}' | grep -xq "ui-improvement"; then
@@ -189,10 +189,10 @@ pipeline {
         
         # run container using explicit image tag
         sudo docker run --name ui-improvement \\
-          -e "MONGO_URI=${MONGO_URI}" \\
-          -e "MONGO_USERNAME=${MONGO_USERNAME}" \\
-          -e "MONGO_PASSWORD=${MONGO_PASSWORD}" \\
-          -p 3000:3000 -d "saikiran8050/ui-improvement:${GIT_COMMIT}"
+          -e "MONGO_URI=${env.MONGO_URI ?: ''}" \\
+          -e "MONGO_USERNAME=${env.MONGO_USERNAME ?: ''}" \\
+          -e "MONGO_PASSWORD=${env.MONGO_PASSWORD ?: ''}" \\
+          -p 3000:3000 -d "saikiran8050/ui-improvement:${env.GIT_COMMIT}"
         """
         
                 // copy and execute on remote, then cleanup remote script
@@ -204,6 +204,7 @@ pipeline {
             }
           }
         }
+
 
 
 
