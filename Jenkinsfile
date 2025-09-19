@@ -154,6 +154,16 @@ pipeline {
             }
         }
 
+        stage('Set Git Commit') {
+          steps {
+            script {
+              env.GIT_COMMIT = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
+              echo "GIT_COMMIT set to ${env.GIT_COMMIT}"
+            }
+          }
+        }
+
+
         stage('Deploy to EC2') {
             when { branch 'feature/*' }
             steps {
