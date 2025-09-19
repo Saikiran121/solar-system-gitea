@@ -174,19 +174,19 @@ pipeline {
                 writeFile file: 'deploy.sh', text: """#!/bin/bash
         set -euo pipefail
         set -x
-        
+
         echo "GIT_COMMIT='${env.GIT_COMMIT}'"
         printf 'GIT_COMMIT (len=%s): \"%s\\\\n\"' ${env.GIT_COMMIT.length()} \"${env.GIT_COMMIT}\"
         echo "MONGO_URI='${env.MONGO_URI ?: ''}'"
         echo "MONGO_USERNAME='${env.MONGO_USERNAME ?: ''}'"
-        
+
         # stop + remove existing container if present
         if sudo docker ps -a --format '{{.Names}}' | grep -xq "ui-improvement"; then
           echo "Container found. Stopping...."
           sudo docker stop ui-improvement && sudo docker rm ui-improvement
           echo "Container stopped and removed"
         fi
-        
+
         # run container using explicit image tag
         sudo docker run --name ui-improvement \\
           -e "MONGO_URI=${env.MONGO_URI ?: ''}" \\
@@ -194,7 +194,7 @@ pipeline {
           -e "MONGO_PASSWORD=${env.MONGO_PASSWORD ?: ''}" \\
           -p 3000:3000 -d "saikiran8050/ui-improvement:${env.GIT_COMMIT}"
         """
-        
+
                 // copy and execute on remote, then cleanup remote script
                 sh '''
                   scp -o StrictHostKeyChecking=no deploy.sh ubuntu@65.0.26.107:/tmp/deploy.sh
@@ -203,6 +203,21 @@ pipeline {
               }
             }
           }
+        }
+
+
+        stage('Integration Testing - AWS EC2') {
+            when {
+                branch 'feature/*'
+            }
+            steps {
+                sh 'printenv | grep -i branch'
+                withAWS(credentials:'aws-s3-ec2-lambda-creds' region: 'ap-south-1') {
+                sh '''
+                    bash /home/ubuntu/git/solar-system-gitea/integration-ec2-testing.sh
+                '''
+                }
+            }
         }
 
 
